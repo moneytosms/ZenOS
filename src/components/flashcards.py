@@ -57,14 +57,14 @@ def render_flashcards():
                     current_card = cards_due[st.session_state.current_card_index]
                     
                     if not st.session_state.card_flipped:
-                        # Show front
-                        card("Front", f"<h2 style='text-align: center;'>{current_card.front}</h2>")
+                        # Show front (pass plain text; avoid injecting raw HTML tags which may be stored as text)
+                        card("Front", str(current_card.front or ""))
                         if st.button("🔍 Show Answer", type="primary"):
                             st.session_state.card_flipped = True
                             st.rerun()
                     else:
-                        # Show back
-                        card("Back", f"<h2 style='text-align: center;'>{current_card.back}</h2>")
+                        # Show back (pass plain text)
+                        card("Back", str(current_card.back or ""))
                         
                         st.markdown("### How well did you know this?")
                         col1, col2, col3, col4, col5 = st.columns(5)
@@ -163,38 +163,51 @@ def render_flashcards():
                         st.warning("Please fill in both front and back.")
             
             with col2:
+                # Text input for generation (rendered persistently so value is available when button is clicked)
+                text_input = st.text_area("Enter text to generate cards from", key="gen_text")
+
                 if st.button("🤖 Generate from Text"):
-                    text_input = st.text_area("Enter text to generate cards from", key="gen_text")
-                    if text_input:
+                    if not gemini_service or not getattr(gemini_service, 'is_configured', lambda: False)():
+                        st.warning("Gemini API key not configured. Please set your API key in the Copilot / Settings area.")
+                    elif not text_input or text_input.strip() == "":
+                        st.warning("Please enter some text to generate flashcards from.")
+                    else:
                         with st.spinner("Generating flashcards..."):
-                            cards = gemini_service.create_flashcards_from_text(text_input, num_cards=5)
-                            if cards:
-                                st.success(f"Generated {len(cards)} cards!")
-                                for i, card_data in enumerate(cards, 1):
-                                    with st.expander(f"Card {i}"):
-                                        st.markdown(f"**Front:** {card_data.get('front', '')}")
-                                        st.markdown(f"**Back:** {card_data.get('back', '')}")
-                                        if st.button(f"Save Card {i}", key=f"save_{i}"):
-                                            course_id = None
-                                            if selected_course != "None":
-                                                course = next((c for c in courses if c.name == selected_course), None)
-                                                if course:
-                                                    course_id = course.id
-                                            
-                                            ef, interval, reps, next_date = initialize_card()
-                                            flashcard = Flashcard(
-                                                user_id=user_id,
-                                                course_id=course_id,
-                                                front=card_data.get('front', ''),
-                                                back=card_data.get('back', ''),
-                                                easiness_factor=ef,
-                                                interval_days=interval,
-                                                repetitions=reps,
-                                                next_review_date=next_date
-                                            )
-                                            db.add(flashcard)
-                                            db.commit()
-                                            st.success(f"Card {i} saved!")
+                            try:
+                                cards = gemini_service.create_flashcards_from_text(text_input, num_cards=5)
+                            except Exception as e:
+                                cards = []
+                                st.error(f"Error generating flashcards: {str(e)}")
+
+                        if cards:
+                            st.success(f"Generated {len(cards)} cards!")
+                            for i, card_data in enumerate(cards, 1):
+                                with st.expander(f"Card {i}"):
+                                    st.markdown(f"**Front:** {card_data.get('front', '')}")
+                                    st.markdown(f"**Back:** {card_data.get('back', '')}")
+                                    if st.button(f"Save Card {i}", key=f"save_{i}"):
+                                        course_id = None
+                                        if selected_course_name:
+                                            course = next((c for c in courses if c.name == selected_course_name), None)
+                                            if course:
+                                                course_id = course.id
+
+                                        ef, interval, reps, next_date = initialize_card()
+                                        flashcard = Flashcard(
+                                            user_id=user_id,
+                                            course_id=course_id,
+                                            front=card_data.get('front', ''),
+                                            back=card_data.get('back', ''),
+                                            easiness_factor=ef,
+                                            interval_days=interval,
+                                            repetitions=reps,
+                                            next_review_date=next_date
+                                        )
+                                        db.add(flashcard)
+                                        db.commit()
+                                        st.success(f"Card {i} saved!")
+                        else:
+                            st.info("No cards were generated. The API may have returned an empty response or the output couldn't be parsed.")
         
         with tabs[2]:
             st.markdown("### All Flashcards")
