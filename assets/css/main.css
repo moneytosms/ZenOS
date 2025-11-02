@@ -1,0 +1,290 @@
+/* Main stylesheet for ZenOS */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap');
+@import './themes.css';
+@import './components.css';
+
+/* Hide Streamlit defaults */
+footer {
+  display: none !important;
+}
+
+#MainMenu {
+  visibility: hidden !important;
+}
+
+header[data-testid="stHeader"] {
+  display: none !important;
+}
+
+/* Global resets and overrides */
+* {
+  box-sizing: border-box;
+}
+
+.stApp {
+  background: var(--bg-primary) !important;
+  font-family: var(--font-body) !important;
+}
+
+.stApp > header {
+  display: none !important;
+}
+
+/* Sidebar styling */
+section[data-testid="stSidebar"] {
+  background: var(--bg-secondary) !important;
+  border-right: 1px solid var(--border-color) !important;
+}
+
+section[data-testid="stSidebar"] > div {
+  padding: var(--spacing-md) !important;
+}
+
+/* Main content area */
+.main .block-container {
+  max-width: 1400px !important;
+  padding: var(--spacing-lg) !important;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading) !important;
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+}
+
+h1 {
+  font-size: 2rem !important;
+  margin-bottom: var(--spacing-md) !important;
+}
+
+h2 {
+  font-size: 1.5rem !important;
+  margin-bottom: var(--spacing-sm) !important;
+}
+
+p {
+  color: var(--text-secondary) !important;
+  line-height: 1.6 !important;
+}
+
+/* Links */
+a {
+  color: var(--primary) !important;
+  text-decoration: none !important;
+  transition: opacity 0.2s ease !important;
+}
+
+a:hover {
+  opacity: 0.8 !important;
+}
+
+/* Buttons - override Streamlit defaults */
+.stButton > button {
+  background: var(--gradient-primary) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: var(--radius-sm) !important;
+  padding: var(--spacing-xs) var(--spacing-md) !important;
+  font-weight: 500 !important;
+  font-family: var(--font-body) !important;
+  transition: all 0.3s ease !important;
+}
+
+.stButton > button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-md) !important;
+  opacity: 0.9 !important;
+}
+
+/* Input fields */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stSelectbox > div > div > select,
+.stDateInput > div > div > input {
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: var(--spacing-xs) var(--spacing-sm) !important;
+  font-family: var(--font-body) !important;
+}
+
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Metrics */
+[data-testid="stMetricValue"] {
+  font-family: var(--font-heading) !important;
+  color: var(--primary) !important;
+}
+
+[data-testid="stMetricLabel"] {
+  color: var(--text-secondary) !important;
+}
+
+/* Dataframes/Tables */
+.dataframe {
+  border-radius: var(--radius-md) !important;
+  overflow: hidden !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Expander */
+.streamlit-expanderHeader {
+  font-family: var(--font-heading) !important;
+  font-weight: 600 !important;
+}
+
+/* Progress bars */
+.stProgress > div > div > div {
+  background: var(--gradient-primary) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+  gap: var(--spacing-xs) !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+  border-radius: var(--radius-sm) !important;
+  padding: var(--spacing-xs) var(--spacing-md) !important;
+}
+
+/* Selectbox/Dropdown */
+.stSelectbox > div > div > div {
+  border-color: var(--border-color) !important;
+}
+
+/* Grid layout utilities */
+.zenos-grid {
+  display: grid;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.zenos-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.zenos-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.zenos-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Responsive grid */
+@media (max-width: 1200px) {
+  .zenos-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .zenos-grid-2,
+  .zenos-grid-3,
+  .zenos-grid-4 {
+    grid-template-columns: 1fr;
+  }
+  
+  .main .block-container {
+    padding: var(--spacing-md) !important;
+  }
+  
+  h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  h2 {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+/* Utility classes */
+.text-center {
+  text-align: center !important;
+}
+
+.text-primary {
+  color: var(--primary) !important;
+}
+
+.text-success {
+  color: var(--success) !important;
+}
+
+.text-warning {
+  color: var(--warning) !important;
+}
+
+.text-error {
+  color: var(--error) !important;
+}
+
+.mb-sm {
+  margin-bottom: var(--spacing-sm) !important;
+}
+
+.mb-md {
+  margin-bottom: var(--spacing-md) !important;
+}
+
+.mt-md {
+  margin-top: var(--spacing-md) !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+

@@ -1,0 +1,30 @@
+[project]
+name = "zenos"
+version = "0.1.0"
+description = "ZenOS: The Personal Learning OS - A unified academic cockpit for students"
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit>=1.28.0",
+    "google-generativeai>=0.3.0",
+    "sqlalchemy>=2.0.0",
+    "pypdf2>=3.0.0",
+    "pdfplumber>=0.10.0",
+    "python-docx>=1.1.0",
+    "reportlab>=4.0.0",
+    "pytz>=2023.3",
+    "pandas>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
