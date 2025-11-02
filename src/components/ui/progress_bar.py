@@ -49,7 +49,7 @@ def progress_bar(value: float, max_value: float = 100.0, color: str = "primary",
     </style>
     """
     try:
-        components.html(style_block + safe_progress, height=height, scrolling=False)
+        components.html(style_block + safe_progress, height=height, scrolling=True)
     except Exception:
         st.markdown(safe_progress, unsafe_allow_html=True)
 

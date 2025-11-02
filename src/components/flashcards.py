@@ -11,6 +11,7 @@ from src.services.spaced_repetition import (
 )
 from src.services.gemini_service import GeminiService
 from src.components.ui.card import card
+from src.utils.helpers import format_date_local
 
 
 def render_flashcards():
@@ -43,7 +44,7 @@ def render_flashcards():
                 upcoming_cards = [c for c in all_cards if c.next_review_date > date.today()]
                 if upcoming_cards:
                     next_review = min(c.next_review_date for c in upcoming_cards)
-                    st.info(f"Next review scheduled for: {next_review.strftime('%Y-%m-%d')}")
+                    st.info(f"Next review scheduled for: {format_date_local(next_review)}")
             else:
                 st.markdown(f"### {len(cards_due)} cards due today")
                 
@@ -227,7 +228,7 @@ def render_flashcards():
                     f"""
                     <strong>Front:</strong> {card_obj.front[:100]}...<br>
                     <strong>Back:</strong> {card_obj.back[:100]}...<br>
-                    <small>Next Review: {card_obj.next_review_date.strftime('%Y-%m-%d')}</small><br>
+                    <small>Next Review: {format_date_local(card_obj.next_review_date)}</small><br>
                     <small>Repetitions: {card_obj.repetitions} | Interval: {card_obj.interval_days} days</small>
                     """
                 )

@@ -37,7 +37,7 @@ def timer_display(minutes: int, seconds: int = 0, label: str = "Work"):
     </style>
     """
     try:
-        components.html(style_block + safe_timer_html, height=height, scrolling=False)
+        components.html(style_block + safe_timer_html, height=height, scrolling=True)
     except Exception:
         st.markdown(safe_timer_html, unsafe_allow_html=True)
 

@@ -13,6 +13,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import io
 from src.components.ui.card import card
+from src.utils.helpers import format_date_local
 
 
 def export_to_docx(content: str, filename: str = "research_draft.docx"):
@@ -206,7 +207,7 @@ def render_research_coach():
             if conversations:
                 for conv in conversations:
                     card(
-                        f"{conv.title or 'Untitled'} - {conv.created_at.strftime('%Y-%m-%d')}",
+                        f"{conv.title or 'Untitled'} - {format_date_local(conv.created_at)}",
                         f"""
                         <details>
                         <summary>View conversation</summary>

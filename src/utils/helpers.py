@@ -2,6 +2,8 @@
 
 from datetime import datetime, date, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
+import os
 
 
 def format_duration(minutes: int) -> str:
@@ -52,4 +54,47 @@ def parse_date_string(date_str: str) -> Optional[date]:
         except ValueError:
             continue
     return None
+
+
+# Timezone helpers
+DEFAULT_TZ = os.getenv("ZENOS_TIMEZONE", "Asia/Kolkata")
+
+
+def get_zoneinfo(tz_name: Optional[str] = None) -> ZoneInfo:
+    """Return a ZoneInfo for the given tz_name or default."""
+    if tz_name is None:
+        tz_name = DEFAULT_TZ
+    try:
+        return ZoneInfo(tz_name)
+    except Exception:
+        # Fallback to UTC
+        return ZoneInfo("UTC")
+
+
+def to_local(dt: datetime, tz_name: Optional[str] = None) -> datetime:
+    """Convert an aware or naive datetime to the local timezone.
+
+    If dt is naive, it is assumed to be in UTC.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        # assume UTC for naive datetimes
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+    zone = get_zoneinfo(tz_name)
+    return dt.astimezone(zone)
+
+
+def format_datetime_local(dt: Optional[datetime], fmt: str = "%Y-%m-%d %H:%M", tz_name: Optional[str] = None) -> str:
+    """Format a datetime in the local timezone. Returns 'N/A' for None."""
+    if dt is None:
+        return "N/A"
+    local = to_local(dt, tz_name)
+    return local.strftime(fmt)
+
+
+def format_date_local(d: Optional[date], fmt: str = "%Y-%m-%d") -> str:
+    if d is None:
+        return "N/A"
+    return d.strftime(fmt)
 

@@ -10,6 +10,7 @@ from src.services.gemini_service import GeminiService
 from src.components.ui.timer import timer_display
 from src.components.ui.card import card
 from src.utils.constants import POMODORO_WORK_MINUTES, POMODORO_SHORT_BREAK_MINUTES
+from src.utils.helpers import format_datetime_local
 from src.utils.course_helpers import get_course_background
 
 
@@ -239,7 +240,7 @@ def render_study_session():
                     f"{session.topic} - {course_name}",
                     f"""
                     Duration: {session.duration_minutes} minutes<br>
-                    Completed: {session.completed_at.strftime('%Y-%m-%d %H:%M') if session.completed_at else 'N/A'}
+                    Completed: {format_datetime_local(session.completed_at)}
                     """
                 )
         else:
