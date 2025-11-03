@@ -128,11 +128,3 @@ Students don't need 7 different apps that don't talk to each other. They need on
 
 **ZenOS isn't another app. It's the OS for learning itself.**
 
-## License
-
-[Add your license here]
-
-## Contributors
-
-[Add contributors here]
-
