@@ -328,126 +328,123 @@ def render_copilot():
                     # request input clear for the next run (set before widget instantiation)
                     st.session_state['_copilot_input_clear'] = True
                     _safe_rerun()
-            # "More options" toggle placed below the Send button so templates are
-            # available after composing a message. We use a session flag to
-            # preserve the expanded/collapsed state across reruns.
-            if '_copilot_show_more_options' not in st.session_state:
-                st.session_state['_copilot_show_more_options'] = False
+        # More options control moved below the input so it can expand full-width
+        if '_copilot_show_more_options' not in st.session_state:
+            st.session_state['_copilot_show_more_options'] = False
 
-            if st.button("More options " + ("▲" if st.session_state['_copilot_show_more_options'] else "▼")):
-                st.session_state['_copilot_show_more_options'] = not st.session_state['_copilot_show_more_options']
+        # Render a small, full-width toggle under the input area. When opened,
+        # the template controls render full-width so everything is visible.
+        if st.button("More options " + ("▲" if st.session_state['_copilot_show_more_options'] else "▼")):
+            st.session_state['_copilot_show_more_options'] = not st.session_state['_copilot_show_more_options']
 
-            if st.session_state['_copilot_show_more_options']:
-                # Render the options in the send column below the buttons. This
-                # keeps them visually below Send and ensures the UI persists.
-                with st.container():
-                    st.markdown("Customize templates below; use these templates to craft messages you can send to Copilot.")
-                    # Exam roadmap details
-                    st.subheader("Exam roadmap")
-                    exam_course = st.selectbox("Course for exam", options=[c.name for c in db.query(Course).filter(Course.user_id == user_id).order_by(Course.name).all()], key="exam_course_select")
-                    exam_date = st.date_input("Exam date", value=date.today(), key="exam_date_input")
-                    exam_topics = st.text_input("Topics (comma-separated, optional)", key="exam_topics_input")
-                    if st.button("Send exam roadmap"):
-                        user_msg = f"I have an exam for {exam_course} on {exam_date.isoformat()}. The topics to cover are: {exam_topics or 'use course topics'}. Based on the course context below, give a prioritized study roadmap (day-by-day) for the days leading up to the exam, including what to cover each day and suggested study durations. Also list must-know concepts and practice suggestions."
-                        st.session_state.copilot_chat.append({"role": "user", "text": user_msg})
-                        # re-render so the user's message appears immediately
-                        _render_messages(chat_holder)
-                        # Stream into the centralized placeholder under the chat
-                        st.session_state['_copilot_generating'] = True
-                        with st.spinner("Thinking"):
-                            try:
-                                if hasattr(gemini, 'stream_generate_content'):
-                                    partial = ""
-                                    for chunk in gemini.stream_generate_content(user_msg):
-                                        try:
-                                            partial += chunk
-                                        except Exception:
-                                            partial = (partial or "") + str(chunk)
-                                        try:
-                                            stream_placeholder.markdown(_bubble_html(partial, 'assistant'), unsafe_allow_html=True)
-                                        except Exception:
-                                            pass
-                                    reply = partial
-                                else:
-                                    # Fallback to background generation
-                                    _start_background_generation(user_msg, context_text, gemini)
-                                    reply, cached, dur, err = _await_background_and_get_result(placeholder=stream_placeholder)
-                                    if err:
-                                        reply = f"Error calling assistant: {err}"
-                            except Exception as e:
-                                reply = f"Error calling assistant: {e}"
-                            finally:
-                                st.session_state['_copilot_generating'] = False
+        if st.session_state['_copilot_show_more_options']:
+            st.markdown("Customize templates below; use these templates to craft messages you can send to Copilot.")
+            # Exam roadmap details
+            st.subheader("Exam roadmap")
+            exam_course = st.selectbox("Course for exam", options=[c.name for c in db.query(Course).filter(Course.user_id == user_id).order_by(Course.name).all()], key="exam_course_select")
+            exam_date = st.date_input("Exam date", value=date.today(), key="exam_date_input")
+            exam_topics = st.text_input("Topics (comma-separated, optional)", key="exam_topics_input")
+            if st.button("Send exam roadmap"):
+                user_msg = f"I have an exam for {exam_course} on {exam_date.isoformat()}. The topics to cover are: {exam_topics or 'use course topics'}. Based on the course context below, give a prioritized study roadmap (day-by-day) for the days leading up to the exam, including what to cover each day and suggested study durations. Also list must-know concepts and practice suggestions."
+                st.session_state.copilot_chat.append({"role": "user", "text": user_msg})
+                # re-render so the user's message appears immediately
+                _render_messages(chat_holder)
+                # Stream into the centralized placeholder under the chat
+                st.session_state['_copilot_generating'] = True
+                with st.spinner("Thinking"):
+                    try:
+                        if hasattr(gemini, 'stream_generate_content'):
+                            partial = ""
+                            for chunk in gemini.stream_generate_content(user_msg):
+                                try:
+                                    partial += chunk
+                                except Exception:
+                                    partial = (partial or "") + str(chunk)
+                                try:
+                                    stream_placeholder.markdown(_bubble_html(partial, 'assistant'), unsafe_allow_html=True)
+                                except Exception:
+                                    pass
+                            reply = partial
+                        else:
+                            # Fallback to background generation
+                            _start_background_generation(user_msg, context_text, gemini)
+                            reply, cached, dur, err = _await_background_and_get_result(placeholder=stream_placeholder)
+                            if err:
+                                reply = f"Error calling assistant: {err}"
+                    except Exception as e:
+                        reply = f"Error calling assistant: {e}"
+                    finally:
+                        st.session_state['_copilot_generating'] = False
 
-                        st.session_state.copilot_chat.append({"role": "assistant", "text": reply})
-                        _safe_rerun()
+                st.session_state.copilot_chat.append({"role": "assistant", "text": reply})
+                _safe_rerun()
 
-                    st.markdown("---")
+            st.markdown("---")
 
-                    # Weekly plan details
-                    st.subheader("Weekly plan")
-                    wp_course = st.selectbox("Course for weekly plan", options=[c.name for c in db.query(Course).filter(Course.user_id == user_id).order_by(Course.name).all()], key="wp_course_select")
-                    wp_hours = st.number_input("Hours per week", min_value=1, max_value=100, value=6, key="wp_hours_input")
-                    if st.button("Send weekly plan"):
-                        user_msg = f"Create a weekly study plan for {wp_course} totaling {wp_hours} hours per week. Break down by day and suggest specific topics/activities, practice and review. Use course context below to prioritize topics."
-                        st.session_state.copilot_chat.append({"role": "user", "text": user_msg})
-                        _render_messages(chat_holder)
-                        st.session_state['_copilot_generating'] = True
-                        with st.spinner("Thinking"):
-                            try:
-                                if hasattr(gemini, 'stream_generate_content'):
-                                    partial = ""
-                                    for chunk in gemini.stream_generate_content(user_msg):
-                                        partial += chunk
-                                        try:
-                                            stream_placeholder.markdown(_bubble_html(partial, 'assistant'), unsafe_allow_html=True)
-                                        except Exception:
-                                            pass
-                                    reply = partial
-                                else:
-                                    _start_background_generation(user_msg, context_text, gemini)
-                                    reply, cached, dur, err = _await_background_and_get_result(placeholder=stream_placeholder)
-                                    if err:
-                                        reply = f"Error calling assistant: {err}"
-                            except Exception as e:
-                                reply = f"Error calling assistant: {e}"
-                            finally:
-                                st.session_state['_copilot_generating'] = False
-                            st.session_state.copilot_chat.append({"role": "assistant", "text": reply})
-                            _safe_rerun()
+            # Weekly plan details
+            st.subheader("Weekly plan")
+            wp_course = st.selectbox("Course for weekly plan", options=[c.name for c in db.query(Course).filter(Course.user_id == user_id).order_by(Course.name).all()], key="wp_course_select")
+            wp_hours = st.number_input("Hours per week", min_value=1, max_value=100, value=6, key="wp_hours_input")
+            if st.button("Send weekly plan"):
+                user_msg = f"Create a weekly study plan for {wp_course} totaling {wp_hours} hours per week. Break down by day and suggest specific topics/activities, practice and review. Use course context below to prioritize topics."
+                st.session_state.copilot_chat.append({"role": "user", "text": user_msg})
+                _render_messages(chat_holder)
+                st.session_state['_copilot_generating'] = True
+                with st.spinner("Thinking"):
+                    try:
+                        if hasattr(gemini, 'stream_generate_content'):
+                            partial = ""
+                            for chunk in gemini.stream_generate_content(user_msg):
+                                partial += chunk
+                                try:
+                                    stream_placeholder.markdown(_bubble_html(partial, 'assistant'), unsafe_allow_html=True)
+                                except Exception:
+                                    pass
+                            reply = partial
+                        else:
+                            _start_background_generation(user_msg, context_text, gemini)
+                            reply, cached, dur, err = _await_background_and_get_result(placeholder=stream_placeholder)
+                            if err:
+                                reply = f"Error calling assistant: {err}"
+                    except Exception as e:
+                        reply = f"Error calling assistant: {e}"
+                    finally:
+                        st.session_state['_copilot_generating'] = False
+                    st.session_state.copilot_chat.append({"role": "assistant", "text": reply})
+                    _safe_rerun()
 
-                    st.markdown("---")
+            st.markdown("---")
 
-                    # Next steps details
-                    st.subheader("What to review next")
-                    ns_course = st.selectbox("Course (next review)", options=[c.name for c in db.query(Course).filter(Course.user_id == user_id).order_by(Course.name).all()], key="ns_course_select")
-                    if st.button("Send next steps"):
-                        user_msg = f"Given my progress in {ns_course} (see context), suggest 3-5 concrete next steps to improve understanding and prepare for upcoming assessments. Include short practice activities and estimated time for each."
-                        st.session_state.copilot_chat.append({"role": "user", "text": user_msg})
-                        _render_messages(chat_holder)
-                        st.session_state['_copilot_generating'] = True
-                        with st.spinner("Thinking"):
-                            try:
-                                if hasattr(gemini, 'stream_generate_content'):
-                                    partial = ""
-                                    for chunk in gemini.stream_generate_content(user_msg):
-                                        partial += chunk
-                                        try:
-                                            stream_placeholder.markdown(_bubble_html(partial, 'assistant'), unsafe_allow_html=True)
-                                        except Exception:
-                                            pass
-                                    reply = partial
-                                else:
-                                    _start_background_generation(user_msg, context_text, gemini)
-                                    reply, cached, dur, err = _await_background_and_get_result(placeholder=stream_placeholder)
-                                    if err:
-                                        reply = f"Error calling assistant: {err}"
-                            except Exception as e:
-                                reply = f"Error calling assistant: {e}"
-                            finally:
-                                st.session_state['_copilot_generating'] = False
-                        st.session_state.copilot_chat.append({"role": "assistant", "text": reply})
-                        _safe_rerun()
+            # Next steps details
+            st.subheader("What to review next")
+            ns_course = st.selectbox("Course (next review)", options=[c.name for c in db.query(Course).filter(Course.user_id == user_id).order_by(Course.name).all()], key="ns_course_select")
+            if st.button("Send next steps"):
+                user_msg = f"Given my progress in {ns_course} (see context), suggest 3-5 concrete next steps to improve understanding and prepare for upcoming assessments. Include short practice activities and estimated time for each."
+                st.session_state.copilot_chat.append({"role": "user", "text": user_msg})
+                _render_messages(chat_holder)
+                st.session_state['_copilot_generating'] = True
+                with st.spinner("Thinking"):
+                    try:
+                        if hasattr(gemini, 'stream_generate_content'):
+                            partial = ""
+                            for chunk in gemini.stream_generate_content(user_msg):
+                                partial += chunk
+                                try:
+                                    stream_placeholder.markdown(_bubble_html(partial, 'assistant'), unsafe_allow_html=True)
+                                except Exception:
+                                    pass
+                            reply = partial
+                        else:
+                            _start_background_generation(user_msg, context_text, gemini)
+                            reply, cached, dur, err = _await_background_and_get_result(placeholder=stream_placeholder)
+                            if err:
+                                reply = f"Error calling assistant: {err}"
+                    except Exception as e:
+                        reply = f"Error calling assistant: {e}"
+                    finally:
+                        st.session_state['_copilot_generating'] = False
+                st.session_state.copilot_chat.append({"role": "assistant", "text": reply})
+                _safe_rerun()
 
             # Small instrumentation output so you can see if calls are cached and timing
             if '_last_call_duration' in st.session_state:
