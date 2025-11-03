@@ -181,33 +181,50 @@ def render_flashcards():
 
                         if cards:
                             st.success(f"Generated {len(cards)} cards!")
-                            for i, card_data in enumerate(cards, 1):
-                                with st.expander(f"Card {i}"):
-                                    st.markdown(f"**Front:** {card_data.get('front', '')}")
-                                    st.markdown(f"**Back:** {card_data.get('back', '')}")
-                                    if st.button(f"Save Card {i}", key=f"save_{i}"):
-                                        course_id = None
-                                        if selected_course_name:
-                                            course = next((c for c in courses if c.name == selected_course_name), None)
-                                            if course:
-                                                course_id = course.id
+                            # Persist generated cards in session_state so they survive reruns when saving
+                            st.session_state.generated_cards = cards
 
-                                        ef, interval, reps, next_date = initialize_card()
-                                        flashcard = Flashcard(
-                                            user_id=user_id,
-                                            course_id=course_id,
-                                            front=card_data.get('front', ''),
-                                            back=card_data.get('back', ''),
-                                            easiness_factor=ef,
-                                            interval_days=interval,
-                                            repetitions=reps,
-                                            next_review_date=next_date
-                                        )
-                                        db.add(flashcard)
-                                        db.commit()
-                                        st.success(f"Card {i} saved!")
-                        else:
-                            st.info("No cards were generated. The API may have returned an empty response or the output couldn't be parsed.")
+                # If we have generated cards from a previous generation, show them here
+                generated = st.session_state.get('generated_cards', [])
+                if generated:
+                    for i, card_data in enumerate(generated, 1):
+                        with st.expander(f"Card {i}"):
+                            st.markdown(f"**Front:** {card_data.get('front', '')}")
+                            st.markdown(f"**Back:** {card_data.get('back', '')}")
+                            save_key = f"save_gen_{i}"
+                            if st.button(f"Save Card {i}", key=save_key):
+                                # Save the card to DB and keep the rest visible
+                                course_id = None
+                                if selected_course_name:
+                                    course = next((c for c in courses if c.name == selected_course_name), None)
+                                    if course:
+                                        course_id = course.id
+
+                                ef, interval, reps, next_date = initialize_card()
+                                flashcard = Flashcard(
+                                    user_id=user_id,
+                                    course_id=course_id,
+                                    front=card_data.get('front', ''),
+                                    back=card_data.get('back', ''),
+                                    easiness_factor=ef,
+                                    interval_days=interval,
+                                    repetitions=reps,
+                                    next_review_date=next_date
+                                )
+                                db.add(flashcard)
+                                db.commit()
+                                st.success(f"Card {i} saved!")
+                                # Optionally remove the saved card from generated list so user doesn't save twice
+                                generated = st.session_state.get('generated_cards', [])
+                                if i-1 < len(generated):
+                                    try:
+                                        generated.pop(i-1)
+                                        st.session_state.generated_cards = generated
+                                    except Exception:
+                                        pass
+                                # Do not force clearing others; keep remaining cards visible
+                else:
+                    st.info("No cards were generated. The API may have returned an empty response or the output couldn't be parsed.")
         
         with tabs[2]:
             st.markdown("### All Flashcards")

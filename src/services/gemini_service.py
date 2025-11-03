@@ -212,6 +212,64 @@ class GeminiService:
                 raise Exception(f"Model not found. Tried: {self.model}. Error: {error_msg}")
             else:
                 raise Exception(f"Error calling Gemini API: {error_msg}")
+
+    def stream_generate_content(self, prompt: str):
+        """Attempt to stream content from the Gemini SDK.
+
+        This is a best-effort implementation that tries multiple possible
+        streaming entry points depending on which GenAI package is available.
+        If streaming is not supported, it falls back to returning the full
+        response as a single chunk.
+
+        Yields: successive text chunks (strings)
+        """
+        if not self.is_configured():
+            raise ValueError("Gemini API key not configured")
+
+        # New API (google.genai)
+        if USE_NEW_API and self.client:
+            model_name = self.model or "gemini-2.5-flash"
+            # Try known streaming interfaces (best-effort)
+            try:
+                # genai.Client.responses.stream or client.responses.stream
+                if hasattr(self.client, 'responses') and hasattr(self.client.responses, 'stream'):
+                    for part in self.client.responses.stream(model=model_name, input=prompt):
+                        # part may be an object with .text or dict-like
+                        text = getattr(part, 'text', None) or (part.get('text') if isinstance(part, dict) else None)
+                        if text:
+                            yield text
+                    return
+            except Exception:
+                pass
+
+            try:
+                # Some SDK versions expose models.stream_generate_content
+                if hasattr(self.client, 'models') and hasattr(self.client.models, 'stream_generate_content'):
+                    for ev in self.client.models.stream_generate_content(model=model_name, contents=prompt):
+                        # ev may contain .text or be dict-like
+                        text = getattr(ev, 'text', None) or (ev.get('text') if isinstance(ev, dict) else None) or getattr(ev, 'delta', None)
+                        if text:
+                            yield text
+                    return
+            except Exception:
+                pass
+
+        # Old API: google.generativeai
+        if not USE_NEW_API and self.model:
+            try:
+                # Some wrappers may provide a streaming generator on the model
+                if hasattr(self.model, 'stream'):
+                    for chunk in self.model.stream(prompt):
+                        text = getattr(chunk, 'text', None) or (chunk.get('text') if isinstance(chunk, dict) else None)
+                        if text:
+                            yield text
+                    return
+            except Exception:
+                pass
+
+        # Fallback: no streaming available; yield full response once
+        full = self._generate_content(prompt)
+        yield full
     
     def parse_syllabus(self, syllabus_text: str) -> Dict[str, Any]:
         """
