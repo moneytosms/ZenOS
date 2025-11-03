@@ -9,6 +9,8 @@ import streamlit as st
 from datetime import date
 from typing import List
 import time
+import re
+import html as _html
 
 # Database models and helpers
 try:
@@ -230,17 +232,91 @@ def render_copilot():
         # We'll render the chat into this placeholder so we can re-render on demand
         chat_holder = st.empty()
 
+        def _markdown_to_html(md: str) -> str:
+            """Small Markdown -> HTML converter for assistant replies.
+
+            Supports a limited but useful subset: fenced code blocks, inline code,
+            bold/italic, links, unordered lists and line breaks. Escapes HTML to
+            avoid injection.
+            """
+            if not md:
+                return ""
+
+            text = _html.escape(md)
+
+            # Fenced code blocks ```lang\n...\n``` -> <pre><code>...</code></pre>
+            code_block_re = re.compile(r"```(?:[a-zA-Z0-9_-]+)?\n(.*?)\n```", re.DOTALL)
+
+            def _cb(m):
+                code = m.group(1)
+                return (
+                    "<pre style='background:#071018;color:#e6eef8;padding:10px;border-radius:6px;overflow:auto;'>"
+                    f"<code>{code}</code></pre>"
+                )
+
+            text = code_block_re.sub(_cb, text)
+
+            # ATX headings: lines starting with 1-6 '#' -> <h1>.. <h6>
+            def _heading_cb(m):
+                level = len(m.group(1))
+                content = m.group(2)
+                return f"<h{level} style='margin:8px 0;color:#e6eef8'>{content}</h{level}>"
+
+            text = re.sub(r"(?m)^(#{1,6})\s+(.*)$", _heading_cb, text)
+
+            # Links [text](url)
+            text = re.sub(r"\[(.*?)\]\((https?://[^\)]+)\)", r"<a href='\2' target='_blank' style='color:#9fd7ff'>\1</a>", text)
+
+            # Inline code `code`
+            text = re.sub(r"`([^`]+)`", r"<code style='background:#071018;color:#cfeffd;padding:2px 6px;border-radius:4px;'>\1</code>", text)
+
+            # Bold **text** and italic *text*
+            text = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", text)
+            text = re.sub(r"\*(.*?)\*", r"<em>\1</em>", text)
+
+            # Unordered lists
+            lines = text.splitlines()
+            out_lines = []
+            in_list = False
+            for ln in lines:
+                m = re.match(r"^[ \t]*([-\*])\s+(.*)$", ln)
+                if m:
+                    if not in_list:
+                        out_lines.append("<ul style='margin:6px 0 6px 18px;padding:0;'>")
+                        in_list = True
+                    out_lines.append(f"<li>{m.group(2)}</li>")
+                else:
+                    if in_list:
+                        out_lines.append("</ul>")
+                        in_list = False
+                    out_lines.append(ln)
+
+            if in_list:
+                out_lines.append("</ul>")
+
+            text = "\n".join(out_lines)
+
+            # Convert remaining line breaks to <br/>
+            text = text.replace('\n', '<br/>')
+
+            return text
+
+
         def _bubble_html(text: str, role: str) -> str:
-            """Return simple HTML for a chat bubble aligned by role ('assistant'|'user')."""
-            # Basic styling — keep inline to avoid external CSS dependence
-            safe_text = text.replace("\n", "<br/>")
+            """Return HTML for a chat bubble aligned by role ('assistant'|'user').
+
+            Assistant messages are converted from Markdown to HTML via
+            _markdown_to_html so replies with code blocks and lists render nicely.
+            """
             if role == 'assistant':
+                safe_html = _markdown_to_html(text)
                 return (
                     f"<div style='margin:8px 0; text-align:left;'><div "
                     f"style='display:inline-block; background:#0b1220; color:#e6eef8; padding:12px; "
-                    f"border-radius:10px; max-width:72%; line-height:1.4;'>{safe_text}</div></div>"
+                    f"border-radius:10px; max-width:72%; line-height:1.4;'>{safe_html}</div></div>"
                 )
             else:
+                safe_text = _html.escape(text).replace("\n", "<br/>")
                 return (
                     f"<div style='margin:8px 0; text-align:right;'><div "
                     f"style='display:inline-block; background:#2b2f36; color:#f8fafc; padding:12px; "
